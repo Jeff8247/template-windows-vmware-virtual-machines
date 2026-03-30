@@ -1,0 +1,109 @@
+# ─── vCenter Connection ───────────────────────────────────────────────────────
+vsphere_server = "vcenter.corp.example.com"
+vsphere_user   = "administrator@vsphere.local"
+# vsphere_password = set via TF_VAR_vsphere_password
+
+# ─── Infrastructure Placement ─────────────────────────────────────────────────
+datacenter = "MYDC01"
+cluster    = "MYCLU01"
+datastore  = "MYDS01"
+vm_folder  = "VMs/AppServers"
+
+# ─── Template ─────────────────────────────────────────────────────────────────
+template_name = "template-win2k19-ltsc-64bit-datacenter"
+
+# ─── VM List ──────────────────────────────────────────────────────────────────
+# Each entry can override any field from the module (CPU, memory, disks, tags, template, etc.).
+# Omit any field to inherit the global default defined below in this file.
+vms = {
+  # 1. Comprehensive Override Example: Every possible option catered for
+  "win-app-01" = {
+    datacenter    = "MYDC01"
+    cluster       = "MYCLU01"
+    datastore     = "MYDS01"
+    resource_pool = "Resources/AppPool"
+    vm_folder     = "VMs/Production"
+    computer_name = "WIN-APP-01-PROD"
+    annotation    = "Primary App Server"
+    tags          = { "Environment" = "Prod", "Role" = "App" }
+    template_name = "template-win2019-gold"
+    num_cpus      = 8
+    memory        = 16384
+    # Step 1: Add a second controller (Bus 1) for high-I/O data drives
+    scsi_controller_count = 2
+    scsi_type             = "pvscsi"
+
+    disks = [
+      # Bus 0: Unit 0 (0:0)
+      { label = "OS", size = 150, unit_number = 0 },
+
+      # Bus 1: Unit 0 (1:0) -> Calculation: (Bus * 16) + Unit = (1 * 16) + 0 = 16
+      { label = "Data", size = 500, unit_number = 16 }
+    ]
+    network_interfaces = [{ network_name = "VM Network" }]
+    ip_settings        = [{ ipv4_address = "10.0.1.101", ipv4_netmask = 24 }]
+    ipv4_gateway       = "10.0.1.1"
+    dns_servers        = ["10.0.0.10"]
+    windows_domain     = "corp.example.com"
+    windows_run_once   = ["powershell.exe -Command \"Install-WindowsFeature Web-Server\""]
+    # ... and all other hardware/OS options are available here
+  }
+
+  # 2. Likely Override Example: Just the common specs (CPU, RAM, Disks, Networking)
+  "win-app-02" = {
+    num_cpus = 4
+    memory   = 8192
+    disks = [
+      { label = "OS", size = 100 },
+      { label = "Data", size = 50 }
+    ]
+    ip_settings  = [{ ipv4_address = "10.0.1.102", ipv4_netmask = 24 }]
+    ipv4_gateway = "10.0.1.1"
+  }
+
+  # 3. Default Example: Takes every setting from the global defaults below
+  "win-app-03" = {}
+}
+
+# ─── Global Windows Defaults ─────────────────────────────────────────────────
+# Applied to any VM that does not specify its own value in the vms map above.
+
+num_cpus = 4
+memory   = 8192
+
+# ─── Global Storage Defaults ──────────────────────────────────────────────────
+disks = [
+  {
+    label       = "disk0"
+    size        = 150
+    unit_number = 0
+  },
+  {
+    label       = "disk1"
+    size        = 50
+    unit_number = 1
+  },
+]
+
+# ─── Networking ───────────────────────────────────────────────────────────────
+network_interfaces = [
+  { network_name = "VM Network" }
+]
+
+dns_servers     = ["10.0.0.1", "10.0.0.2"]
+dns_suffix_list = ["corp.example.com"]
+
+# ─── Global Guest OS Defaults ─────────────────────────────────────────────────
+domain    = "corp.example.com"
+time_zone = 260
+# windows_admin_password = set via TF_VAR_windows_admin_password
+
+# ─── Global Hardware Defaults ─────────────────────────────────────────────────
+hardware_version     = 21
+tools_upgrade_policy = "upgradeAtPowerCycle"
+
+# ─── Domain Join ──────────────────────────────────────────────────────────────
+windows_domain      = "corp.example.com"
+windows_domain_user = "svc-domainjoin@corp.example.com"
+# windows_domain_password = set via TF_VAR_windows_domain_password
+windows_domain_ou   = "OU=AppServers,OU=Servers,DC=corp,DC=example,DC=com"
