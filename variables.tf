@@ -105,13 +105,7 @@ variable "vms" {
     customize_timeout           = optional(number)
     extra_config                = optional(map(string))
   }))
-  default = {
-    "win-app-01" = {}
-    "win-app-02" = {}
-    "win-app-03" = {}
-    "win-app-04" = {}
-    "win-app-05" = {}
-  }
+  default = {}
 
   validation {
     condition     = length(var.vms) > 0
